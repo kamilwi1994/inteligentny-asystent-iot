@@ -11,14 +11,15 @@ Projekt zrealizowany w ramach przedmiotu "Internet Rzeczy". System integruje dan
 1.  **Sklonuj repozytorium:**
 
     git clone https://github.com/kamilwi1994/inteligentny-asystent-iot.git
+    
     cd inteligentny-asystent-iot
 
-2.  **Zainstaluj wymagane biblioteki:**
+3.  **Zainstaluj wymagane biblioteki:**
     Zalecane jest użycie środowiska wirtualnego.
 
     pip install -r requirements.txt
 
-3.  **Konfiguracja:**
+4.  **Konfiguracja:**
     Otwórz plik `konfiguracja.py`. Jest to główny plik ustawień projektu. Musisz uzupełnić go o dane swojego środowiska:
 
     *   **Poświadczenia:**
