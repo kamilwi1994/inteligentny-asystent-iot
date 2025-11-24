@@ -1,0 +1,20 @@
+Zasady optymalizacji zużycia energii cieplnej w domu:
+
+1. Temperatury w pomieszczeniach:
+   - Salon i strefa dzienna: Optymalna temperatura to 20-22°C.
+   - Sypialnia: Dla zdrowego snu zaleca się temperaturę 17-19°C.
+   - Łazienka: Komfortowa temperatura to 22-24°C.
+   - Pokoje nieużywane: Warto utrzymywać około 16-18°C, aby nie wychłodzić murów.
+
+2. Obniżanie temperatury nocą:
+   - Obniżenie temperatury o 1°C pozwala zaoszczędzić ok. 6% energii grzewczej.
+   - Zaleca się stosowanie harmonogramów, które automatycznie obniżają temperaturę w godzinach nocnych (np. 23:00 - 06:00) oraz w czasie nieobecności domowników.
+
+3. Wietrzenie:
+   - Należy wietrzyć krótko, ale intensywnie (otwarte okna na oścież przez 5-10 minut).
+   - Przed wietrzeniem należy zakręcić termostaty, aby głowice nie otwierały się maksymalnie pod wpływem zimnego powietrza.
+   - Nie należy wietrzyć poprzez uchylenie okna na wiele godzin – to wychładza ściany i generuje duże straty.
+
+4. Zarządzanie energią elektryczną:
+   - Warto monitorować zużycie energii w poszczególnych fazach, aby wykryć urządzenia działające w trybie "standby".
+   - Największe zużycie generują urządzenia grzewcze (bojler, piekarnik, czajnik) oraz pralka i suszarka.
