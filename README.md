@@ -10,7 +10,7 @@ Projekt zrealizowany w ramach przedmiotu "Internet Rzeczy". System integruje dan
 
 1.  **Sklonuj repozytorium:**
 
-    git clone https://github.com/kamilwi1994/inteligentny-asystent-iot.git
+    git clone https://github.com/kamilwi1994/inteligentny-asystent-iot
     
     cd inteligentny-asystent-iot
 
