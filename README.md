@@ -94,7 +94,7 @@ CZUJNIKI_TEMPERATURY = {
 ```
 W trybie demo (Docker) te ID są już skonfigurowane i zgodne z generatorem danych.
 
-🏭 Przełączenie na tryb Produkcyjny
+## 🏭 Przełączenie na tryb Produkcyjny
 
 Aby podłączyć aplikację do prawdziwej instalacji Home Assistant:
 
