@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Baza danych (symulacja Home Assistant DB)
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: home_assistant_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      
+  app:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8501:8501"
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password123
+      DB_NAME: home_assistant_local
+
+volumes:
+  postgres_data:
