@@ -51,7 +51,7 @@ $env:GOOGLE_API_KEY="TWOJ_KLUCZ_TUTAJ"
 Wpisz w terminalu:
 
 ```Bash
-docker-compose up --build
+ocker compose up -d
 ```
 System wykona następujące czynności:
 Pobierze obraz bazy danych PostgreSQL.
