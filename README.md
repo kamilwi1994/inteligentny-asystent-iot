@@ -30,7 +30,7 @@ To zalecana metoda uruchomienia, nie wymaga instalowania Pythona ani bazy Postgr
 
 ### Krok 1: Pobierz projekt
 ```bash
-git clone https://github.com/twoj-login/inteligentny-asystent-iot.git
+git clone https://github.com/kamilwi1994/inteligentny-asystent-iot.git
 cd inteligentny-asystent-iot
 ```
 ### Krok 2: Ustaw Klucz API
