@@ -19,13 +19,11 @@ def new_request(self, method, url, *args, **kwargs):
     return old_request(self, method, url, *args, **kwargs)
 requests.Session.request = new_request
 # ----------------
-
+from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
@@ -34,6 +32,36 @@ import konfiguracja as cfg
 DB_DIR = "wektorowa_baza_danych"
 DATA_DIR = "dane_z_ha"
 
+OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+MODEL_CHAT = os.getenv("OLLAMA_MODEL", "llama3.2")
+MODEL_EMBED = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+
+def ensure_model(model_name):
+    """Sprawdza czy model istnieje w Ollamie, jak nie - wymusza pobranie."""
+    print(f"🔍 Sprawdzam dostępność modelu: {model_name} w {OLLAMA_URL}...")
+    try:
+        resp = requests.get(f"{OLLAMA_URL}/api/tags")
+        if resp.status_code == 200:
+            models = [m['name'] for m in resp.json().get('models', [])]
+            if any(model_name in m for m in models):
+                print(f"Model {model_name} jest już dostępny.")
+                return True
+        
+        print(f"Model {model_name} nieznaleziony. Rozpoczynam pobieranie (to może potrwać)...")
+        pull_resp = requests.post(f"{OLLAMA_URL}/api/pull", json={"name": model_name}, stream=False)
+        
+        if pull_resp.status_code == 200:
+            print(f"Pomyślnie pobrano model {model_name}.")
+            return True
+        else:
+            print(f"Błąd pobierania modelu: {pull_resp.text}")
+            return False
+            
+    except Exception as e:
+        print(f" Błąd połączenia z Ollamą: {e}")
+        print("Upewnij się, że kontener Ollama działa i jest w tej samej sieci.")
+        return False
+    
 def przygotuj_dane_z_ha():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
@@ -136,22 +164,28 @@ def przygotuj_dane_z_ha():
     return True
 
 def stworz_i_zapisz_baze_wektorowa():
-    print("Indeksowanie danych...")
+    print("Indeksowanie danych (Ollama)...")
+    ensure_model(MODEL_EMBED)
     docs = []
     if os.path.exists('baza_wiedzy/'):
         docs.extend(DirectoryLoader('baza_wiedzy/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'}).load())
-    docs.extend(DirectoryLoader(DATA_DIR, glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'}).load())
     
-    if not docs: return None
+    if os.path.exists(DATA_DIR):
+        docs.extend(DirectoryLoader(DATA_DIR, glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'}).load())
+    
+    if not docs: 
+        print("Brak dokumentów.")
+        return None
 
-    splits = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=200).split_documents(docs)
+    splits = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=150).split_documents(docs)
     
-    embedding_model = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001", 
-        google_api_key=cfg.GOOGLE_API_KEY,
-        transport="rest",
-        client_options={"api_endpoint": "generativelanguage.googleapis.com"}
+    # ZMIANA NA OLLAMA
+    embedding_model = OllamaEmbeddings(
+        model=MODEL_EMBED,
+        base_url=OLLAMA_URL
     )
+   
+    
     return Chroma.from_documents(documents=splits, embedding=embedding_model, persist_directory=DB_DIR)
 
 def get_rag_chain():
@@ -162,23 +196,19 @@ def get_rag_chain():
 
     przygotuj_dane_z_ha()
     stworz_i_zapisz_baze_wektorowa()
+    ensure_model(MODEL_CHAT)
+    ensure_model(MODEL_EMBED)
 
-    embedding_model = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001", 
-        google_api_key=cfg.GOOGLE_API_KEY,
-        transport="rest",
-        client_options={"api_endpoint": "generativelanguage.googleapis.com"}
+    embedding_model = OllamaEmbeddings(
+        model=MODEL_EMBED,
+        base_url=OLLAMA_URL
     )
+   
+
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embedding_model)
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
     
-    # Pobieramy 40 dokumentów (dni)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 40}) 
-
-    
-    template = """Jesteś ekspertem analizy danych.
-Masz dostęp do raportów z wielu dni (każdy dokument to jeden dzień).
-Jeśli pytam o średnią, zsumuj wartości z dostępnych dni i podziel przez liczbę dni.
-
+    template = """Jesteś asystentem IoT. Analizuj poniższe dane.
 Kontekst:
 {context}
 
@@ -186,12 +216,10 @@ Pytanie: {question}
 """
     prompt = ChatPromptTemplate.from_template(template)
     
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-001", 
-        temperature=0, 
-        google_api_key=cfg.GOOGLE_API_KEY,
-        transport="rest",
-        client_options={"api_endpoint": "generativelanguage.googleapis.com"}
+    llm = ChatOllama(
+        model=MODEL_CHAT,
+        temperature=0,
+        base_url=OLLAMA_URL
     )
 
     return ({"context": retriever | (lambda docs: "\n\n".join(d.page_content for d in docs)), "question": RunnablePassthrough()} | prompt | llm | StrOutputParser())

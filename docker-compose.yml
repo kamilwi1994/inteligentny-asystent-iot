@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Baza danych (symulacja Home Assistant DB)
+  # Twoja baza danych
   db:
     image: postgres:15-alpine
     restart: always
@@ -9,11 +9,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
       POSTGRES_DB: home_assistant_local
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      
+    networks:
+      - ai_network  # Wpinamy się do sieci
+
   app:
     build: .
     depends_on:
@@ -21,12 +21,21 @@ services:
     ports:
       - "8501:8501"
     environment:
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: password123
       DB_NAME: home_assistant_local
+      # Konfiguracja Ollamy 
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "llama3.2"  # Model do rozmowy
+      OLLAMA_EMBED_MODEL: "nomic-embed-text" # Model do wektorów
+    networks:
+      - ai_network  # Wpinamy się do sieci 
 
 volumes:
   postgres_data:
+
+networks:
+  ai_network:
+    external: true 
