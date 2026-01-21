@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import json
 import requests
 import warnings
+import konfiguracja as cfg
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 # --- FIX SSL ---
@@ -32,34 +33,47 @@ import konfiguracja as cfg
 DB_DIR = "wektorowa_baza_danych"
 DATA_DIR = "dane_z_ha"
 
-OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-MODEL_CHAT = os.getenv("OLLAMA_MODEL", "llama3.2")
-MODEL_EMBED = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+OLLAMA_URL = cfg.OLLAMA_BASE_URL
+MODEL_CHAT = cfg.MODEL_CHAT
+MODEL_EMBED = cfg.MODEL_EMBED
 
 def ensure_model(model_name):
-    """Sprawdza czy model istnieje w Ollamie, jak nie - wymusza pobranie."""
-    print(f"🔍 Sprawdzam dostępność modelu: {model_name} w {OLLAMA_URL}...")
+    """
+    Sprawdza czy model istnieje. Jak nie - pobiera go ze wskaźnikiem postępu (stream).
+    To zapobiega timeoutom przy dużych plikach.
+    """
+    print(f"🔍 [Ollama] Sprawdzam dostępność modelu: {model_name}...")
     try:
         resp = requests.get(f"{OLLAMA_URL}/api/tags")
         if resp.status_code == 200:
             models = [m['name'] for m in resp.json().get('models', [])]
             if any(model_name in m for m in models):
-                print(f"Model {model_name} jest już dostępny.")
+                print(f"[Ollama] Model {model_name} jest gotowy.")
                 return True
         
-        print(f"Model {model_name} nieznaleziony. Rozpoczynam pobieranie (to może potrwać)...")
-        pull_resp = requests.post(f"{OLLAMA_URL}/api/pull", json={"name": model_name}, stream=False)
+        print(f"⬇[Ollama] Model {model_name} nieznaleziony. POBIERAM... (Proszę czekać)")
         
-        if pull_resp.status_code == 200:
-            print(f"Pomyślnie pobrano model {model_name}.")
-            return True
-        else:
-            print(f"Błąd pobierania modelu: {pull_resp.text}")
-            return False
+        response = requests.post(f"{OLLAMA_URL}/api/pull", json={"name": model_name}, stream=True)
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode('utf-8')
+                try:
+                    data = json.loads(decoded_line)
+                    if 'status' in data:
+                        status = data['status']
+                        if "downloading" not in status: 
+                            print(f"   ... {status}")
+                except:
+                    pass
+        
+        print(f"[Ollama] Pomyślnie pobrano model {model_name}.")
+        return True
             
     except Exception as e:
-        print(f" Błąd połączenia z Ollamą: {e}")
-        print("Upewnij się, że kontener Ollama działa i jest w tej samej sieci.")
+        print(f"[Ollama] Błąd krytyczny: {e}")
+        print("Sprawdź, czy kontener Ollama działa i ma dostęp do internetu.")
         return False
     
 def przygotuj_dane_z_ha():
@@ -72,9 +86,8 @@ def przygotuj_dane_z_ha():
         print(f"Błąd inicjalizacji silnika DB: {e}")
         return False
     
-    # Pobieramy 30 dni
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=cfg.HISTORY_DAYS)
     
     wszystkie_encje = list(cfg.CZUJNIKI_TEMPERATURY.keys()) + list(cfg.CZUJNIKI_ENERGII.keys())
     if not wszystkie_encje: return False
@@ -199,14 +212,9 @@ def get_rag_chain():
     ensure_model(MODEL_CHAT)
     ensure_model(MODEL_EMBED)
 
-    embedding_model = OllamaEmbeddings(
-        model=MODEL_EMBED,
-        base_url=OLLAMA_URL
-    )
-   
-
+    embedding_model = OllamaEmbeddings(model=MODEL_EMBED, base_url=OLLAMA_URL)
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embedding_model)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": cfg.RAG_K_RETRIEVAL})
     
     template = """Jesteś asystentem IoT. Analizuj poniższe dane.
 Kontekst:

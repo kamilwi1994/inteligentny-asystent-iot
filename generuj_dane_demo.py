@@ -61,7 +61,7 @@ def generuj_dane():
     
     # Generujemy dane z 30 dni 
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=30) 
+    start_date = end_date - timedelta(days=cfg.HISTORY_DAYS) 
     
     records = []
     energy_counters = {k: random.uniform(1000, 5000) for k in cfg.CZUJNIKI_ENERGII}

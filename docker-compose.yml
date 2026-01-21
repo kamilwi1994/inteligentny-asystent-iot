@@ -1,19 +1,20 @@
 version: '3.8'
 
 services:
-  # Twoja baza danych
+  # Baza danych
   db:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: home_assistant_local
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - ai_network  # Wpinamy się do sieci
+      - default_net
 
+  # Aplikacja RAG
   app:
     build: .
     depends_on:
@@ -21,21 +22,26 @@ services:
     ports:
       - "8501:8501"
     environment:
-      DB_HOST: db
+      # Przekazujemy zmienne z .env do wnętrza kontenera Python
+      DB_HOST: ${POSTGRES_HOST}
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password123
-      DB_NAME: home_assistant_local
-      # Konfiguracja Ollamy 
-      OLLAMA_BASE_URL: "http://ollama:11434"
-      OLLAMA_MODEL: "llama3.2"  # Model do rozmowy
-      OLLAMA_EMBED_MODEL: "nomic-embed-text" # Model do wektorów
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL_CHAT}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_MODEL_EMBED}
+      
+      HISTORY_DAYS: ${HISTORY_DAYS}
+      RAG_K_RETRIEVAL: ${RAG_K_RETRIEVAL}
     networks:
-      - ai_network  # Wpinamy się do sieci 
+      - default_net
 
 volumes:
   postgres_data:
 
 networks:
-  ai_network:
-    external: true 
+  default_net:
+    name: ${AI_NETWORK_NAME} # Docker użyje nazwy z pliku .env
+    external: true
